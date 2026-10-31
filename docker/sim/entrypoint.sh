@@ -15,6 +15,11 @@ exec /workspace/isaaclab/_isaac_sim/python.sh "$@"
 WRAPPER
 chmod +x /usr/local/bin/python
 
-python -m pip install -e /workspace/Sim-to-Real-SO-101-Workshop/source/sim_to_real_so101/
+# Name host GIDs injected by the NVIDIA runtime (e.g. render) to silence "groups: cannot find name"
+for gid in $(id -G); do
+    getent group "$gid" >/dev/null || groupadd -g "$gid" "host_gid_$gid"
+done
+
+python -m pip install -q --root-user-action=ignore -e /workspace/Sim-to-Real-SO-101-Workshop/source/sim_to_real_so101/
 
 exec "$@"
