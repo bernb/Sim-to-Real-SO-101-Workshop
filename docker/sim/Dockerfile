@@ -4,17 +4,20 @@ ENV PYTHON=/workspace/isaaclab/_isaac_sim/python.sh
 ENV PATH="/workspace/isaaclab/_isaac_sim/kit/python/bin:$PATH"
 
 
-WORKDIR /workspace
-RUN git clone https://github.com/huggingface/lerobot.git
 WORKDIR /workspace/lerobot
-RUN git checkout e670ac5daf9b76
+# Shallow-fetch the pinned commit instead of cloning the full history
+RUN git init -q . && \
+    git remote add origin https://github.com/huggingface/lerobot.git && \
+    git fetch -q --depth 1 origin e670ac5daf9b76cf5c18f632b89a8ff85c727ca6 && \
+    git checkout -q FETCH_HEAD
 
 # Install lerobot without deps to avoid upgrading packages that break
 # Isaac Lab's symlinked vendored copies (packaging, numpy, torch, etc.)
 RUN $PYTHON -m pip install --no-deps -e .
 
 # Pin packages already in the base image to prevent upgrades that break
-# Isaac Lab's internal symlinks (packaging, numpy, lxml, torch, etc.)
+# Isaac Lab's internal symlinks (packaging, numpy, lxml, torch, etc.).
+# pyarrow>=26 requires numpy>=2 and breaks `datasets`/lerobot imports.
 RUN printf '%s\n' \
     "packaging==23.0" \
     "numpy==1.26.0" \
@@ -22,6 +25,7 @@ RUN printf '%s\n' \
     "torch==2.7.0" \
     "torchvision==0.22.0" \
     "imageio==2.37.0" \
+    "pyarrow<26" \
     > /tmp/constraints.txt
 
 # Install only the deps not already in the base image
