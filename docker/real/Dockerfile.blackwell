@@ -24,11 +24,16 @@ RUN cd /Isaac-GR00T && \
     git checkout "${GROOT_REF}" && \
     git rev-parse --verify HEAD && \
     sed -i '/flash-attn==/d' pyproject.toml && \
-    python3 -m pip install -e . --break-system-packages
+    sed -i 's/"tensorrt>=10.14.1.48.post1"/"tensorrt-cu12==10.14.1.48.post1"/' pyproject.toml && \
+    grep -q '"tensorrt-cu12==' pyproject.toml && \
+    python3 -m pip install --extra-index-url https://pypi.nvidia.com --timeout 60 -e . --break-system-packages
 RUN cd /Isaac-GR00T/gr00t/eval/real_robot/SO100 && \
     python3 -m pip install -e . --break-system-packages
-RUN python3 -m pip uninstall -y torch torchvision torchaudio && python3 -m pip install --pre torch torchvision torchaudio --index-url https://download.pytorch.org/whl/nightly/cu130
-RUN export MAX_JOBS=2 && python3 -m pip install flash-attn --no-build-isolation --no-cache-dir
+# Pin a stable cu130 torch: recent nightlies require C++20, which breaks the flash-attn (C++17) build.
+RUN python3 -m pip uninstall -y torch torchvision torchaudio && \
+    python3 -m pip install torch==2.9.1 torchvision==0.24.1 torchaudio==2.9.1 --index-url https://download.pytorch.org/whl/cu130
+RUN export MAX_JOBS=2 FLASH_ATTN_CUDA_ARCHS="100;120" && \
+    python3 -m pip install flash-attn==2.8.3 --no-build-isolation --no-cache-dir
 RUN python3 -m pip install feetech-servo-sdk
 
 RUN update-alternatives --install /usr/bin/python python /usr/bin/python3.10 1
